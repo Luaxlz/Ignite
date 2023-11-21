@@ -8,8 +8,13 @@ import {
   StartCountdownButton,
   TaskInput,
 } from './styles';
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
 
 export default function Home() {
+  const { register, handleSubmit } = useForm();
+
+  const [task, setTask] = useState('');
   return (
     <HomeContainer>
       <form action=''>
@@ -18,8 +23,9 @@ export default function Home() {
           {/* é definido o texto como label para que quando o usuário clique no texto seja dado focus ao input */}
           <TaskInput
             id='task'
-            placeholder='Dê um nome para o seu projeto'
             list='task-suggestions'
+            placeholder='Dê um nome para o seu projeto'
+            {...register('task')}
           />
           <datalist id='task-suggestions'>
             <option value='Projeto 1'></option>
@@ -35,6 +41,7 @@ export default function Home() {
             step={5}
             min={5}
             max={60}
+            {...register('minutesAmount')}
           />
           <span>minutos.</span>
         </FormContainer>
@@ -47,7 +54,7 @@ export default function Home() {
           <span>0</span>
         </CountdownContainer>
 
-        <StartCountdownButton type='submit' disabled>
+        <StartCountdownButton type='submit' disabled={!task}>
           <Play size={24} />
           Começar
         </StartCountdownButton>
