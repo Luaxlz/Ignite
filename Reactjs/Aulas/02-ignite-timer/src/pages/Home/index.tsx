@@ -11,7 +11,8 @@ import {
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as zod from 'zod';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { differenceInSeconds } from 'date-fns';
 
 const newCycleFormValidationSchema = zod.object({
   task: zod.string().min(1, 'Informe a tarefa'),
@@ -27,6 +28,7 @@ interface Cycle {
   id: string;
   task: string;
   minutesAmount: number;
+  startDate: Date;
 }
 
 export default function Home() {
@@ -49,6 +51,7 @@ export default function Home() {
       id,
       task: data.task,
       minutesAmount: data.minutesAmount,
+      startDate: new Date(),
     };
 
     setCycles((state) => [...state, newCycle]); //Sempre que a atualização do estado depender do estado anterior utilizar uma arrow function para fazer a nova atribuição.
@@ -80,6 +83,17 @@ export default function Home() {
 
   const taskIsValid = watch('task');
   const isSubmitDisabled = !taskIsValid;
+
+  useEffect(() => {
+    if (activeCycle) {
+      setInterval(() => {
+        setSecondsPassed(
+          differenceInSeconds(new Date(), activeCycle.startDate)
+        );
+      }, 1000);
+    }
+  }, [activeCycle]);
+
   return (
     <HomeContainer>
       <form action='' onSubmit={handleSubmit(handleCreateNewCycle)}>
