@@ -32,6 +32,7 @@ interface Cycle {
 export default function Home() {
   const [cycles, setCycles] = useState<Cycle[]>([]);
   const [activeCycleId, setActiveCycleId] = useState<string | null>(null);
+  const [secondsPassed, setSecondsPassed] = useState(0);
 
   const { register, handleSubmit, watch, reset } = useForm<newCycleFormData>({
     resolver: zodResolver(newCycleFormValidationSchema),
@@ -56,7 +57,26 @@ export default function Home() {
     reset();
   };
 
-  const findActiveCycle = cycles.find((cycle) => cycle.id === activeCycleId);
+  //finding if there is a active cycle
+  const activeCycle = cycles.find((cycle) => cycle.id === activeCycleId);
+
+  //If the active cycle exists converts the cicyle total minutes to seconds
+  const minutesAmountToSeconds = activeCycle
+    ? activeCycle.minutesAmount * 60
+    : 0;
+
+  //If the active cycle exists get the active cycle lifespan in seconds
+  const currentSeconds = activeCycle
+    ? minutesAmountToSeconds - secondsPassed
+    : 0;
+
+  //Gets the cycle lifespan in minutes and remaining seconds
+  const currentMinutesAmount = Math.floor(currentSeconds / 60);
+  const currentSecondsAmount = currentSeconds % 60;
+
+  //Formatting the minutes and seconds to add a 0 if the number is lower than 10
+  const formattedMinutes = String(currentMinutesAmount).padStart(2, '0');
+  const formattedSeconds = String(currentSecondsAmount).padStart(2, '0');
 
   const taskIsValid = watch('task');
   const isSubmitDisabled = !taskIsValid;
@@ -92,11 +112,11 @@ export default function Home() {
         </FormContainer>
 
         <CountdownContainer>
-          <span>0</span>
-          <span>0</span>
+          <span>{formattedMinutes[0]}</span>
+          <span>{formattedMinutes[1]}</span>
           <Separator>:</Separator>
-          <span>0</span>
-          <span>0</span>
+          <span>{formattedSeconds[0]}</span>
+          <span>{formattedSeconds[1]}</span>
         </CountdownContainer>
 
         <StartCountdownButton type='submit' disabled={isSubmitDisabled}>
