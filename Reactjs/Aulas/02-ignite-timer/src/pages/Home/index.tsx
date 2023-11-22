@@ -56,6 +56,7 @@ export default function Home() {
 
     setCycles((state) => [...state, newCycle]); //Sempre que a atualização do estado depender do estado anterior utilizar uma arrow function para fazer a nova atribuição.
     setActiveCycleId(id);
+    setSecondsPassed(0);
 
     reset();
   };
