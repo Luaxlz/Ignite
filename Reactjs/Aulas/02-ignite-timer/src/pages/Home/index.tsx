@@ -1,4 +1,4 @@
-import { Play } from '@phosphor-icons/react';
+import { HandPalm, Play } from '@phosphor-icons/react';
 import {
   CountdownContainer,
   FormContainer,
@@ -6,6 +6,7 @@ import {
   MinutesAmountInput,
   Separator,
   StartCountdownButton,
+  StopCountdownButton,
   TaskInput,
 } from './styles';
 import { useForm } from 'react-hook-form';
@@ -29,6 +30,7 @@ interface Cycle {
   task: string;
   minutesAmount: number;
   startDate: Date;
+  interruptedDate?: Date;
 }
 
 export default function Home() {
@@ -60,6 +62,23 @@ export default function Home() {
 
     reset();
   };
+
+  const handleInterruptCycle = () => {
+    //setCycles maps the cycles array, if the cycle is active returns the cycle with a new interrupted date, however if the cycle isn't active just return the cycle.
+    setCycles(
+      cycles.map((cycle) => {
+        if (cycle.id === activeCycleId) {
+          return { ...cycle, interruptedDate: new Date() };
+        } else {
+          return cycle;
+        }
+      })
+    );
+
+    //deactivates the cycle so the user can active or create another cycle
+    setActiveCycleId(null);
+  };
+  console.log(cycles);
 
   //finding if there is a active cycle
   const activeCycle = cycles.find((cycle) => cycle.id === activeCycleId);
@@ -116,6 +135,7 @@ export default function Home() {
             id='task'
             list='task-suggestions'
             placeholder='Dê um nome para o seu projeto'
+            disabled={!!activeCycle}
             {...register('task')}
           />
           <datalist id='task-suggestions'>
@@ -132,6 +152,7 @@ export default function Home() {
             step={5}
             min={5}
             max={60}
+            disabled={!!activeCycle}
             {...register('minutesAmount', { valueAsNumber: true })}
           />
           <span>minutos.</span>
@@ -145,10 +166,17 @@ export default function Home() {
           <span>{formattedSeconds[1]}</span>
         </CountdownContainer>
 
-        <StartCountdownButton type='submit' disabled={isSubmitDisabled}>
-          <Play size={24} />
-          Começar
-        </StartCountdownButton>
+        {activeCycle ? (
+          <StopCountdownButton type='button' onClick={handleInterruptCycle}>
+            <HandPalm size={24} />
+            Interromper
+          </StopCountdownButton>
+        ) : (
+          <StartCountdownButton type='submit' disabled={isSubmitDisabled}>
+            <Play size={24} />
+            Começar
+          </StartCountdownButton>
+        )}
       </form>
     </HomeContainer>
   );
