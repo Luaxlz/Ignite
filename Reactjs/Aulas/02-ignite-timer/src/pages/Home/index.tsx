@@ -8,16 +8,38 @@ import {
   StartCountdownButton,
   TaskInput,
 } from './styles';
-import { useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as zod from 'zod';
+
+const newCycleFormValidationSchema = zod.object({
+  task: zod.string().min(1, 'Informe a tarefa'),
+  minutesAmount: zod
+    .number()
+    .min(5, 'O ciclo precisa ser de no mínimo 5 minutos')
+    .max(60, 'O ciclo precisa ser de no máximo 60 minutos'),
+});
+
+type newCycleFormData = zod.infer<typeof newCycleFormValidationSchema>;
 
 export default function Home() {
-  const { register, handleSubmit } = useForm();
+  const { register, handleSubmit, watch, reset } = useForm<newCycleFormData>({
+    resolver: zodResolver(newCycleFormValidationSchema),
+    defaultValues: {
+      task: '',
+      minutesAmount: 0,
+    },
+  });
 
-  const [task, setTask] = useState('');
+  const handleCreateNewCycle = (data: newCycleFormData) => {
+    reset();
+  };
+
+  const taskIsValid = watch('task');
+  const isSubmitDisabled = !taskIsValid;
   return (
     <HomeContainer>
-      <form action=''>
+      <form action='' onSubmit={handleSubmit(handleCreateNewCycle)}>
         <FormContainer>
           <label htmlFor='task'>Vou trabalhar em</label>{' '}
           {/* é definido o texto como label para que quando o usuário clique no texto seja dado focus ao input */}
@@ -41,7 +63,7 @@ export default function Home() {
             step={5}
             min={5}
             max={60}
-            {...register('minutesAmount')}
+            {...register('minutesAmount', { valueAsNumber: true })}
           />
           <span>minutos.</span>
         </FormContainer>
@@ -54,7 +76,7 @@ export default function Home() {
           <span>0</span>
         </CountdownContainer>
 
-        <StartCountdownButton type='submit' disabled={!task}>
+        <StartCountdownButton type='submit' disabled={isSubmitDisabled}>
           <Play size={24} />
           Começar
         </StartCountdownButton>
