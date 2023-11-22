@@ -86,6 +86,12 @@ export default function Home() {
   const isSubmitDisabled = !taskIsValid;
 
   useEffect(() => {
+    if (activeCycle) {
+      document.title = `${formattedMinutes}:${formattedSeconds}`;
+    }
+  }, [formattedMinutes, formattedSeconds, activeCycle]);
+
+  useEffect(() => {
     let interval: number;
     if (activeCycle) {
       interval = setInterval(() => {
