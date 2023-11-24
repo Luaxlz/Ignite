@@ -19,7 +19,7 @@ const newCycleFormValidationSchema = zod.object({
   task: zod.string().min(1, 'Informe a tarefa'),
   minutesAmount: zod
     .number()
-    .min(5, 'O ciclo precisa ser de no mínimo 5 minutos')
+    .min(1, 'O ciclo precisa ser de no mínimo 5 minutos')
     .max(60, 'O ciclo precisa ser de no máximo 60 minutos'),
 });
 
@@ -31,6 +31,7 @@ interface Cycle {
   minutesAmount: number;
   startDate: Date;
   interruptedDate?: Date;
+  finishedDate?: Date;
 }
 
 export default function Home() {
@@ -65,8 +66,8 @@ export default function Home() {
 
   const handleInterruptCycle = () => {
     //setCycles maps the cycles array, if the cycle is active returns the cycle with a new interrupted date, however if the cycle isn't active just return the cycle.
-    setCycles(
-      cycles.map((cycle) => {
+    setCycles((state) =>
+      state.map((cycle) => {
         if (cycle.id === activeCycleId) {
           return { ...cycle, interruptedDate: new Date() };
         } else {
@@ -84,14 +85,10 @@ export default function Home() {
   const activeCycle = cycles.find((cycle) => cycle.id === activeCycleId);
 
   //If the active cycle exists converts the cicyle total minutes to seconds
-  const minutesAmountToSeconds = activeCycle
-    ? activeCycle.minutesAmount * 60
-    : 0;
+  const totalSeconds = activeCycle ? activeCycle.minutesAmount * 60 : 0;
 
   //If the active cycle exists get the active cycle lifespan in seconds
-  const currentSeconds = activeCycle
-    ? minutesAmountToSeconds - secondsPassed
-    : 0;
+  const currentSeconds = activeCycle ? totalSeconds - secondsPassed : 0;
 
   //Gets the cycle lifespan in minutes and remaining seconds
   const currentMinutesAmount = Math.floor(currentSeconds / 60);
@@ -114,16 +111,39 @@ export default function Home() {
     let interval: number;
     if (activeCycle) {
       interval = setInterval(() => {
-        setSecondsPassed(
-          differenceInSeconds(new Date(), activeCycle.startDate)
+        const secondsDifference = differenceInSeconds(
+          new Date(),
+          activeCycle.startDate
         );
+
+        // tests if the time in seconds that has passed is greater/equal than the total seconds of the cycle lifespan, if yes than map() the cycle array and set the finishedDate property with the current date.
+
+        //Another important thing to remember is that, whenever we update a state AND that said state depends on its previous state, we must use a arrow function to update that said state with de use of the (state) => state.map(cycle) in this case.
+        if (secondsDifference >= totalSeconds) {
+          setCycles((state) =>
+            state.map((cycle) => {
+              if (cycle.id === activeCycleId) {
+                return { ...cycle, finishedDate: new Date() };
+              } else {
+                return cycle;
+              }
+            })
+          );
+
+          setSecondsPassed(totalSeconds);
+
+          clearInterval(interval);
+        } else {
+          //Important to only set the secondsPassed variable ONLY if the cycle is not completed.
+          setSecondsPassed(secondsDifference);
+        }
       }, 1000);
     }
 
     return () => {
       clearInterval(interval);
     };
-  }, [activeCycle]);
+  }, [activeCycle, totalSeconds]);
 
   return (
     <HomeContainer>
@@ -150,7 +170,7 @@ export default function Home() {
             id='minutesAmount'
             placeholder='00'
             step={5}
-            min={5}
+            min={1}
             max={60}
             disabled={!!activeCycle}
             {...register('minutesAmount', { valueAsNumber: true })}
