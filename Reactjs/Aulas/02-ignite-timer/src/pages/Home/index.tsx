@@ -1,45 +1,31 @@
 import { HandPalm, Play } from '@phosphor-icons/react';
 import {
-  CountdownContainer,
-  FormContainer,
   HomeContainer,
-  MinutesAmountInput,
-  Separator,
   StartCountdownButton,
   StopCountdownButton,
-  TaskInput,
 } from './styles';
-import { useForm } from 'react-hook-form';
+import { Countdown } from './components/Countdown';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { FormProvider, useForm } from 'react-hook-form';
 import * as zod from 'zod';
-import { useEffect, useState } from 'react';
-import { differenceInSeconds } from 'date-fns';
-
-const newCycleFormValidationSchema = zod.object({
-  task: zod.string().min(1, 'Informe a tarefa'),
-  minutesAmount: zod
-    .number()
-    .min(1, 'O ciclo precisa ser de no mínimo 5 minutos')
-    .max(60, 'O ciclo precisa ser de no máximo 60 minutos'),
-});
-
-type newCycleFormData = zod.infer<typeof newCycleFormValidationSchema>;
-
-interface Cycle {
-  id: string;
-  task: string;
-  minutesAmount: number;
-  startDate: Date;
-  interruptedDate?: Date;
-  finishedDate?: Date;
-}
+import { NewCycleForm } from './components/NewCycleForm';
+import { CyclesContext } from '../../contexts/CyclesContext';
+import { useContext } from 'react';
 
 export default function Home() {
-  const [cycles, setCycles] = useState<Cycle[]>([]);
-  const [activeCycleId, setActiveCycleId] = useState<string | null>(null);
-  const [secondsPassed, setSecondsPassed] = useState(0);
+  const { createNewCycle, interruptCurrentCycle, activeCycle } =
+    useContext(CyclesContext);
+  const newCycleFormValidationSchema = zod.object({
+    task: zod.string().min(1, 'Informe a tarefa'),
+    minutesAmount: zod
+      .number()
+      .min(5, 'O ciclo precisa ser de no mínimo 5 minutos')
+      .max(60, 'O ciclo precisa ser de no máximo 60 minutos'),
+  });
 
-  const { register, handleSubmit, watch, reset } = useForm<newCycleFormData>({
+  type newCycleFormData = zod.infer<typeof newCycleFormValidationSchema>;
+
+  const newCycleForm = useForm<newCycleFormData>({
     resolver: zodResolver(newCycleFormValidationSchema),
     defaultValues: {
       task: '',
@@ -47,147 +33,25 @@ export default function Home() {
     },
   });
 
+  const { handleSubmit, watch, reset } = newCycleForm;
+
   const handleCreateNewCycle = (data: newCycleFormData) => {
-    const id = String(new Date().getTime());
-
-    const newCycle: Cycle = {
-      id,
-      task: data.task,
-      minutesAmount: data.minutesAmount,
-      startDate: new Date(),
-    };
-
-    setCycles((state) => [...state, newCycle]); //Sempre que a atualização do estado depender do estado anterior utilizar uma arrow function para fazer a nova atribuição.
-    setActiveCycleId(id);
-    setSecondsPassed(0);
-
+    createNewCycle(data);
     reset();
   };
-
-  const handleInterruptCycle = () => {
-    //setCycles maps the cycles array, if the cycle is active returns the cycle with a new interrupted date, however if the cycle isn't active just return the cycle.
-    setCycles((state) =>
-      state.map((cycle) => {
-        if (cycle.id === activeCycleId) {
-          return { ...cycle, interruptedDate: new Date() };
-        } else {
-          return cycle;
-        }
-      })
-    );
-
-    //deactivates the cycle so the user can active or create another cycle
-    setActiveCycleId(null);
-  };
-  console.log(cycles);
-
-  //finding if there is a active cycle
-  const activeCycle = cycles.find((cycle) => cycle.id === activeCycleId);
-
-  //If the active cycle exists converts the cicyle total minutes to seconds
-  const totalSeconds = activeCycle ? activeCycle.minutesAmount * 60 : 0;
-
-  //If the active cycle exists get the active cycle lifespan in seconds
-  const currentSeconds = activeCycle ? totalSeconds - secondsPassed : 0;
-
-  //Gets the cycle lifespan in minutes and remaining seconds
-  const currentMinutesAmount = Math.floor(currentSeconds / 60);
-  const currentSecondsAmount = currentSeconds % 60;
-
-  //Formatting the minutes and seconds to add a 0 if the number is lower than 10
-  const formattedMinutes = String(currentMinutesAmount).padStart(2, '0');
-  const formattedSeconds = String(currentSecondsAmount).padStart(2, '0');
 
   const taskIsValid = watch('task');
   const isSubmitDisabled = !taskIsValid;
 
-  useEffect(() => {
-    if (activeCycle) {
-      document.title = `${formattedMinutes}:${formattedSeconds}`;
-    }
-  }, [formattedMinutes, formattedSeconds, activeCycle]);
-
-  useEffect(() => {
-    let interval: number;
-    if (activeCycle) {
-      interval = setInterval(() => {
-        const secondsDifference = differenceInSeconds(
-          new Date(),
-          activeCycle.startDate
-        );
-
-        // tests if the time in seconds that has passed is greater/equal than the total seconds of the cycle lifespan, if yes than map() the cycle array and set the finishedDate property with the current date.
-
-        //Another important thing to remember is that, whenever we update a state AND that said state depends on its previous state, we must use a arrow function to update that said state with de use of the (state) => state.map(cycle) in this case.
-        if (secondsDifference >= totalSeconds) {
-          setCycles((state) =>
-            state.map((cycle) => {
-              if (cycle.id === activeCycleId) {
-                return { ...cycle, finishedDate: new Date() };
-              } else {
-                return cycle;
-              }
-            })
-          );
-
-          setSecondsPassed(totalSeconds);
-
-          clearInterval(interval);
-        } else {
-          //Important to only set the secondsPassed variable ONLY if the cycle is not completed.
-          setSecondsPassed(secondsDifference);
-        }
-      }, 1000);
-    }
-
-    return () => {
-      clearInterval(interval);
-    };
-  }, [activeCycle, totalSeconds]);
-
   return (
     <HomeContainer>
       <form action='' onSubmit={handleSubmit(handleCreateNewCycle)}>
-        <FormContainer>
-          <label htmlFor='task'>Vou trabalhar em</label>{' '}
-          {/* é definido o texto como label para que quando o usuário clique no texto seja dado focus ao input */}
-          <TaskInput
-            id='task'
-            list='task-suggestions'
-            placeholder='Dê um nome para o seu projeto'
-            disabled={!!activeCycle}
-            {...register('task')}
-          />
-          <datalist id='task-suggestions'>
-            <option value='Projeto 1'></option>
-            <option value='Projeto 2'></option>
-            <option value='Projeto 3'></option>
-            <option value='Banana'></option>
-          </datalist>
-          <label htmlFor='minutesAmount'>durante</label>
-          <MinutesAmountInput
-            type='number'
-            id='minutesAmount'
-            placeholder='00'
-            step={5}
-            min={1}
-            max={60}
-            disabled={!!activeCycle}
-            {...register('minutesAmount', { valueAsNumber: true })}
-          />
-          <span>minutos.</span>
-        </FormContainer>
-
-        <CountdownContainer>
-          <span>{formattedMinutes[0]}</span>
-          <span>{formattedMinutes[1]}</span>
-          <Separator>:</Separator>
-          <span>{formattedSeconds[0]}</span>
-          <span>{formattedSeconds[1]}</span>
-        </CountdownContainer>
-
+        <FormProvider {...newCycleForm}>
+          <NewCycleForm />
+        </FormProvider>
+        <Countdown />
         {activeCycle ? (
-          <StopCountdownButton type='button' onClick={handleInterruptCycle}>
+          <StopCountdownButton type='button' onClick={interruptCurrentCycle}>
             <HandPalm size={24} />
             Interromper
           </StopCountdownButton>
