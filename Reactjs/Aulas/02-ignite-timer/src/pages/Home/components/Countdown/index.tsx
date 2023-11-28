@@ -31,7 +31,7 @@ export function Countdown() {
       interval = setInterval(() => {
         const secondsDifference = differenceInSeconds(
           new Date(),
-          activeCycle.startDate
+          new Date(activeCycle.startDate) // if the data received in the activeCycle is a string, converts it to a Date object
         );
 
         // tests if the time in seconds that has passed is greater/equal than the total seconds of the cycle lifespan, if yes than map() the cycle array and set the finishedDate property with the current date.
