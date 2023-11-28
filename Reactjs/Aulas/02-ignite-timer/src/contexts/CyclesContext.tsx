@@ -1,13 +1,10 @@
-import { ReactNode, createContext, useState } from 'react';
-
-interface Cycle {
-  id: string;
-  task: string;
-  minutesAmount: number;
-  startDate: Date;
-  interruptedDate?: Date;
-  finishedDate?: Date;
-}
+import { ReactNode, createContext, useReducer, useState } from 'react';
+import { Cycle, cyclesReducer } from '../reducers/cycles/reducer';
+import {
+  addNewCycleAction,
+  interruptCurrentCycleAction,
+  markCurrentCycleAsFinishedAction,
+} from '../reducers/cycles/actions';
 
 interface CyclesContextType {
   cycles: Cycle[];
@@ -34,24 +31,17 @@ export const CyclesContext = createContext({} as CyclesContextType);
 export function CyclesContextProvider({
   children,
 }: CyclesContextProviderProps) {
-  const [cycles, setCycles] = useState<Cycle[]>([]);
-  const [activeCycleId, setActiveCycleId] = useState<string | null>(null);
+  //Reducers are a great tool for dealing with more complex state changes in our application, a reducer receives the current state, performs some action and returns the updated state.
+  const [cyclesState, dispatch] = useReducer(cyclesReducer, {
+    cycles: [],
+    activeCycleId: null,
+  });
   const [secondsPassed, setSecondsPassed] = useState(0);
+
+  const { cycles, activeCycleId } = cyclesState;
 
   //finding if there is a active cycle
   const activeCycle = cycles.find((cycle) => cycle.id === activeCycleId);
-
-  const markCurrentCycleAsFinished = () => {
-    setCycles((state) =>
-      state.map((cycle) => {
-        if (cycle.id === activeCycleId) {
-          return { ...cycle, finishedDate: new Date() };
-        } else {
-          return cycle;
-        }
-      })
-    );
-  };
 
   const setSecondsPassedProxy = (seconds: number) => {
     setSecondsPassed(seconds);
@@ -67,27 +57,16 @@ export function CyclesContextProvider({
       startDate: new Date(),
     };
 
-    setCycles((state) => [...state, newCycle]); //Sempre que a atualização do estado depender do estado anterior utilizar uma arrow function para fazer a nova atribuição.
-    setActiveCycleId(id);
+    dispatch(addNewCycleAction(newCycle));
     setSecondsPassed(0);
+  };
 
-    //reset();
+  const markCurrentCycleAsFinished = () => {
+    dispatch(markCurrentCycleAsFinishedAction());
   };
 
   const interruptCurrentCycle = () => {
-    //setCycles maps the cycles array, if the cycle is active returns the cycle with a new interrupted date, however if the cycle isn't active just return the cycle.
-    setCycles((state) =>
-      state.map((cycle) => {
-        if (cycle.id === activeCycleId) {
-          return { ...cycle, interruptedDate: new Date() };
-        } else {
-          return cycle;
-        }
-      })
-    );
-
-    //deactivates the cycle so the user can active or create another cycle
-    setActiveCycleId(null);
+    dispatch(interruptCurrentCycleAction());
   };
 
   return (
